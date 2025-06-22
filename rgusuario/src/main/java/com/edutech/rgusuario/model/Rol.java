@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,11 +30,14 @@ public class Rol {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message="El nombre del rol no puede estar vacío.")
     @Column(length = 50, nullable = false, unique = true)
     private String nombre;
 
     @Column(length = 255)
     private String descripcion;
+
+
     //Colección de elemnetos, un enumPermisos en este caso
     @ElementCollection(targetClass= Permiso.class)
     //Nombre de la tabla y cómo se relaciona con la principal
