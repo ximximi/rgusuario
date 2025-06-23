@@ -42,52 +42,60 @@ public class UsuarioService {
         if (usuarioRepository.existsByRut(usuario.getRut())){
             throw new IllegalArgumentException("El RUT ingresado ya está registrado.");
         }
-        //Se pone el rol predeterminado al nuevo usuario
-        Rol rolCliente = rolService.obtenerRolCliente();
-        //Asigna rol al usuario como una lista que contiene un solo elemento
-        usuario.setRoles(Collections.singletonList(rolCliente));
+        // Validación de roles
+        if (usuario.getRoles() == null || usuario.getRoles().isEmpty()) {
+            //se asigna rol cliente si no se especificó
+            Rol rolCliente = rolService.obtenerRolCliente();
+            usuario.setRoles(Collections.singletonList(rolCliente));
+        } else { //el rol asignado tiene que existir
+            List<Rol> rolesValidos = usuario.getRoles().stream()//recorre cada rol adjunto a Usuario
+                .map(r -> rolService.findByNombre(r.getNombre())//verifica que exista, busca el rol por nombre
+                    .orElseThrow(() -> new IllegalArgumentException("Rol no válido: " + r.getNombre())))
+                .collect(Collectors.toList());//se juntan los Rol válidos encontrados en una lista
+            usuario.setRoles(rolesValidos);//se reemplaza por esta lista verificada
+        }
         //se da los datos por defecto: fechaRegistro y estado
         usuario.crearCuenta();
         //Ahora, encriptación de contraseña
         String hash = BCrypt.hashpw(usuario.getContrasena(), BCrypt.gensalt());
         usuario.setContrasenaHash(hash);
-
+        usuario.setContrasena(null); 
         //guarda usuario en la bd
         return usuarioRepository.save(usuario);
     }
 
-    //REGISTRAR usando usuarioRegistroDTO
+    //REGISTRAR usando usuarioRegistroDTO. ESTO ES PARA CLIENTE
+    @Transactional
     public Usuario registrarDesdeCliente(UsuarioRegistroDTO dto) {
-    if (usuarioRepository.existsByUsername(dto.getUsername())) {
-        throw new IllegalArgumentException("El nombre de usuario ya está registrado.");
-    }
-    if (usuarioRepository.existsByEmail(dto.getEmail())) {
-        throw new IllegalArgumentException("El email ya está registrado.");
-    }
-    if (usuarioRepository.existsByRut(dto.getRut())) {
-        throw new IllegalArgumentException("El RUT ingresado ya está registrado.");
-    }
-    Usuario usuario = new Usuario();
-    usuario.setRut(dto.getRut());
-    usuario.setPrimerNomb(dto.getPrimerNomb());
-    usuario.setSegundoNomb(dto.getSegundoNomb());
-    usuario.setPrimerApell(dto.getPrimerApell());
-    usuario.setSegundoApell(dto.getSegundoApell());
-    usuario.setFechaNacimiento(dto.getFechaNacimiento());
-    usuario.setUsername(dto.getUsername());
-    usuario.setEmail(dto.getEmail());
+        if (usuarioRepository.existsByUsername(dto.getUsername())) {
+            throw new IllegalArgumentException("El nombre de usuario ya está registrado.");
+        }
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("El email ya está registrado.");
+        }
+        if (usuarioRepository.existsByRut(dto.getRut())) {
+            throw new IllegalArgumentException("El RUT ingresado ya está registrado.");
+        }
+        Usuario usuario = new Usuario();
+        usuario.setRut(dto.getRut());
+        usuario.setPrimerNomb(dto.getPrimerNomb());
+        usuario.setSegundoNomb(dto.getSegundoNomb());
+        usuario.setPrimerApell(dto.getPrimerApell());
+        usuario.setSegundoApell(dto.getSegundoApell());
+        usuario.setFechaNacimiento(dto.getFechaNacimiento());
+        usuario.setUsername(dto.getUsername());
+        usuario.setEmail(dto.getEmail());
 
-    String hash = BCrypt.hashpw(dto.getContrasena(), BCrypt.gensalt());
-    usuario.setContrasenaHash(hash);
-
-    // Rol por defecto
-    Rol rolCliente = rolService.obtenerRolCliente();
-    usuario.setRoles(Collections.singletonList(rolCliente));
-
-    // Estado y fecha
-    usuario.crearCuenta();
-    return usuarioRepository.save(usuario);
-}
+        String hash = BCrypt.hashpw(dto.getContrasena(), BCrypt.gensalt());
+        usuario.setContrasenaHash(hash);
+        usuario.setContrasena(null); 
+        // Rol cliente por defecto
+        Rol rolCliente = rolService.obtenerRolCliente();
+        usuario.setRoles(Collections.singletonList(rolCliente));
+        // Estado y fecha predeterminado (ACTIVO e instant)
+        usuario.crearCuenta();
+        return usuarioRepository.save(usuario);
+    }
 
     //Lista de usuarios
     public List<Usuario> findAll() {
