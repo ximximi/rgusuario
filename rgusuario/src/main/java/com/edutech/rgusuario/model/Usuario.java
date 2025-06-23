@@ -1,9 +1,12 @@
 package com.edutech.rgusuario.model;
 
-import java.sql.Date;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -23,6 +26,7 @@ import jakarta.persistence.TemporalType;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -67,16 +71,19 @@ public class Usuario {
     @Column(length = 50, nullable = true)
     private String segundoApell;   
 
+    
+    @Past(message = "La fecha de nacimiento debe ser en el pasado")
     @NotNull(message = "La fecha no puede estar vacía")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @Temporal(TemporalType.DATE)
     @Column(nullable = false)
-    private Date fechaNacimiento;
+    private LocalDate fechaNacimiento;
     
     @NotBlank(message = "El username no puede estar vacío")
     @Column(length = 50, nullable = false)
     private String username;
 
-    @Email
+    @Email(message = "El formato del email no es válido")//usuario+@+dominio
     @NotBlank(message = "El email no puede estar vacío")
     @Column(length = 100, nullable = false)
     private String email;
@@ -86,7 +93,8 @@ public class Usuario {
     @jakarta.persistence.Transient
     private String contrasena;
     //esta sí se guarda en la bd
-    @Column(length = 30, nullable = false)
+    //solo se puede escribir pero ya no se mostrará en el json
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String contrasenaHash;
 
     @Enumerated(EnumType.STRING)
@@ -119,10 +127,6 @@ public class Usuario {
         this.primerApell = primerApell;
         this.segundoApell = segundoApell;
         this.email = email;
-    }
-
-    public boolean verificarCredenciales(String username, String contrasena) {
-        return this.username.equals(username) && this.contrasena.equals(contrasena);
     }
 
     public void cambiarEstado(Estado estado) {

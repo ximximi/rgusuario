@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.edutech.rgusuario.dto.RolDTO;
 import com.edutech.rgusuario.dto.UsuarioDTO;
+import com.edutech.rgusuario.dto.UsuarioRegistroDTO;
 import com.edutech.rgusuario.model.Estado;
 import com.edutech.rgusuario.model.Rol;
 import com.edutech.rgusuario.model.Usuario;
@@ -30,7 +31,7 @@ public class UsuarioService {
     //Transacción completa
     //Si ocurre una exception, los cambios se revierten
     @Transactional
-    public Usuario registrarUsuario(Usuario usuario){
+    public Usuario crearUsuario(Usuario usuario){
         //Por si se repiten los datos ya registrados
         if (usuarioRepository.existsByUsername(usuario.getUsername())){
             throw new IllegalArgumentException("El nombre de usuario ya está registrado.");
@@ -55,22 +56,39 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
-    public boolean actualizarContrasena(Long id, String nuevaContrasena){
-        try{
-            Optional<Usuario> opt = usuarioRepository.findById(id);
-            if(opt.isPresent()){
-                Usuario usuario = opt.get();
-                usuario.setContrasenaHash(nuevaContrasena);
-                usuarioRepository.save(usuario);
-                return true;
-            }
-            return false;
-        } catch(Exception e){
-            System.out.println("Error al actualizar contraseña");
-            e.printStackTrace();
-            return false;
-        }
+    //REGISTRAR usando usuarioRegistroDTO
+    public Usuario registrarDesdeCliente(UsuarioRegistroDTO dto) {
+    if (usuarioRepository.existsByUsername(dto.getUsername())) {
+        throw new IllegalArgumentException("El nombre de usuario ya está registrado.");
     }
+    if (usuarioRepository.existsByEmail(dto.getEmail())) {
+        throw new IllegalArgumentException("El email ya está registrado.");
+    }
+    if (usuarioRepository.existsByRut(dto.getRut())) {
+        throw new IllegalArgumentException("El RUT ingresado ya está registrado.");
+    }
+    Usuario usuario = new Usuario();
+    usuario.setRut(dto.getRut());
+    usuario.setPrimerNomb(dto.getPrimerNomb());
+    usuario.setSegundoNomb(dto.getSegundoNomb());
+    usuario.setPrimerApell(dto.getPrimerApell());
+    usuario.setSegundoApell(dto.getSegundoApell());
+    usuario.setFechaNacimiento(dto.getFechaNacimiento());
+    usuario.setUsername(dto.getUsername());
+    usuario.setEmail(dto.getEmail());
+
+    String hash = BCrypt.hashpw(dto.getContrasena(), BCrypt.gensalt());
+    usuario.setContrasenaHash(hash);
+
+    // Rol por defecto
+    Rol rolCliente = rolService.obtenerRolCliente();
+    usuario.setRoles(Collections.singletonList(rolCliente));
+
+    // Estado y fecha
+    usuario.crearCuenta();
+    return usuarioRepository.save(usuario);
+}
+
     //Lista de usuarios
     public List<Usuario> findAll() {
         return usuarioRepository.findAll();
@@ -110,12 +128,8 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
     //sof delete, cambia estado a INACTIVO
-    public void desactivarUsuario(Long id){
-        Usuario usuario = usuarioRepository.findById(id)
-        .orElseThrow(()-> new RuntimeException("Usuario no encontrado."));
-        
-        usuario.setEstado(Estado.INACTIVO);
-        usuarioRepository.save(usuario);
+    public void desactivarUsuario(Long id) {
+        cambiarEstado(id, Estado.INACTIVO);
     }
 
     public boolean existsById(Long id) {
@@ -145,13 +159,7 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
     
-    public boolean verificarCredenciales(String username, String contrasena) {
-        Usuario usuario = usuarioRepository.findByUsername(username)
-            .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con username: " + username));
 
-        return usuario.verificarCredenciales(username, contrasena);
-    }
-    
     public Usuario cambiarEstado(Long id, Estado estado) {
         Usuario usuario = usuarioRepository.findById(id)
             .orElseThrow(()-> new IllegalArgumentException("No se encontró el usuario con Id: "+ id));
@@ -205,6 +213,8 @@ public class UsuarioService {
             ))
             .collect(Collectors.toList());
     }
+
+
 
 
 }

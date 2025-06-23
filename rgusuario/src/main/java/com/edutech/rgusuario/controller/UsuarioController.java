@@ -6,20 +6,26 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edutech.rgusuario.dto.UsuarioDTO;
+import com.edutech.rgusuario.dto.UsuarioRegistroDTO;
 import com.edutech.rgusuario.model.ApiRespuesta;
 import com.edutech.rgusuario.model.Estado;
+import com.edutech.rgusuario.model.Rol;
 import com.edutech.rgusuario.model.Usuario;
 import com.edutech.rgusuario.service.RolService;
 import com.edutech.rgusuario.service.UsuarioService;
+
+import jakarta.validation.Valid;
 
 
 @RestController
@@ -130,27 +136,27 @@ public class UsuarioController {
     //crear usuario
     @PostMapping
     public ResponseEntity<?> createUsuario(@RequestBody Usuario usuario) {
-        if (usuarioService.existsByRut(usuario.getRut())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El RUT ya está registrado");
-        }
-
-        if (usuarioService.existsByUsername(usuario.getUsername())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El nombre de usuario ya está registrado");
-        }
-
-        if (usuarioService.existsByEmail(usuario.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El email ya está registrado");
-        }
-
         try {
-            Usuario savedUsuario = usuarioService.save(usuario);
+            Usuario savedUsuario = usuarioService.crearUsuario(usuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUsuario);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Error al crear el usuario: " + e.getMessage());
+        }
+    }
+    //crear usuario PERSPECTIVA CLIENTE
+    @PostMapping("/registro")
+    public ResponseEntity<?> registrarCliente(@Valid @RequestBody UsuarioRegistroDTO dto) {
+        try {
+            Usuario nuevo = usuarioService.registrarDesdeCliente(dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al registrar usuario: " + e.getMessage());
         }
     }
 
@@ -159,38 +165,33 @@ public class UsuarioController {
     @PutMapping("/{id}")
     //@pathvariable es el id en la url y @RequestBdy es para el nuevo contenido del usuario
     public ResponseEntity<?> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
-        // Validaciones de duplicados
         Optional<Usuario> actualOpt = usuarioService.findById(id);
         //por si no se encuentra
         if (actualOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con ID: " + id);
+                .body(new ApiRespuesta<>("No se encontró el usuario con ID: " + id, null));
         }
-
+        //se recupera porque sí existe
         Usuario actual = actualOpt.get();
-
+        //validaciones de duplicados
         if (!actual.getRut().equals(usuario.getRut()) &&
             usuarioService.existsByRut(usuario.getRut())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El RUT ya está registrado por otro usuario");
+                .body(new ApiRespuesta<>("El RUT ya está registrado", null));
         }
-
         if (!actual.getUsername().equals(usuario.getUsername()) &&
             usuarioService.existsByUsername(usuario.getUsername())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El nombre de usuario ya está registrado");
+                .body(new ApiRespuesta<>("El username ya está registrado", null));
         }
-
         if (!actual.getEmail().equals(usuario.getEmail()) &&
             usuarioService.existsByEmail(usuario.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El email ya está registrado");
-        }
-
-        
+                .body(new ApiRespuesta<>("El email ya está registrado", null));
+        }     
+        //actualización
         actual.setRut(usuario.getRut());
         actual.setUsername(usuario.getUsername());
-        actual.setContrasena(usuario.getContrasena());
         actual.setFechaNacimiento(usuario.getFechaNacimiento());
 
         usuarioService.modificarInformacion(
@@ -202,13 +203,69 @@ public class UsuarioController {
             usuario.getEmail()
         );
 
-        usuarioService.cambiarEstado(id, usuario.getEstado());
-
-        // Si querés permitir modificar roles desde acá
-        actual.setRoles(usuario.getRoles());
-
         Usuario actualizado = usuarioService.save(actual);
         return ResponseEntity.ok(actualizado);
+    }
+    //Modificar DESDE LA PERSPECTIVA DEL CLIENTE
+    @PutMapping("/{id}/modificar")
+    public ResponseEntity<?> modificarInformacion(
+        
+            @PathVariable Long id,
+            //captura los parámetros enviados en la url
+            //porque RequestBody sería aplicable con un nuevo dto
+            @RequestParam String primerNomb,
+            @RequestParam(required = false) String segundoNomb,
+            @RequestParam String primerApell,
+            @RequestParam(required = false) String segundoApell,
+            @RequestParam String email) {
+        Optional<Usuario> usuarioOpt = usuarioService.findById(id);
+        if (usuarioOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("No se encontró el usuario con ID: " + id);
+        }
+        Usuario actual = usuarioOpt.get();
+        if (!actual.getEmail().equals(email) && usuarioService.existsByEmail(email)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El email ya está registrado por otro usuario");
+        }
+
+        Usuario actualizado = usuarioService.modificarInformacion(
+            id, primerNomb, segundoNomb, primerApell, segundoApell, email
+        );
+
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @PostMapping("/{usuarioId}/roles/{rolId}")
+    public ResponseEntity<?> agregarRol(
+            @PathVariable Long usuarioId,
+            @PathVariable Long rolId) {
+
+        Optional<Rol> rolOpt = rolService.findById(rolId);
+        if (rolOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiRespuesta<>("No se encontró el rol con ID: " + rolId, null));
+        }
+        try {
+            Usuario actualizado = usuarioService.agregarRol(usuarioId, rolOpt.get());
+            return ResponseEntity.ok(actualizado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiRespuesta<>(e.getMessage(),null));
+        }
+    }
+    @DeleteMapping("/{usuarioId}/roles/{rolId}")
+    public ResponseEntity<?> removerRol(
+            @PathVariable Long usuarioId,
+            @PathVariable Long rolId) {
+
+        try {
+            Usuario actualizado = usuarioService.removerRol(usuarioId, rolId);
+            return ResponseEntity.ok(actualizado);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiRespuesta<>(e.getMessage(),null));
+        }
     }
 }
 
