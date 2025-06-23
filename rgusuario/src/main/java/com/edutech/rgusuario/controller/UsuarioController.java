@@ -8,6 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -53,6 +56,7 @@ public class UsuarioController {
         }
     }
     //UsuarioDTO
+    //obtener usuario por id pero te pasa el usuarioDTO 
     @GetMapping("/info/{id}")
     public ResponseEntity<?> getUsuarioDTOById(@PathVariable Long id) {
         Optional<UsuarioDTO> usuarioDTO = usuarioService.findUsuarioDTOById(id);
@@ -121,6 +125,90 @@ public class UsuarioController {
             return ResponseEntity.ok("No hay usuarios con estado: " + estado);
         }
         return ResponseEntity.ok(usuarios);
+    }
+
+    //crear usuario
+    @PostMapping
+    public ResponseEntity<?> createUsuario(@RequestBody Usuario usuario) {
+        if (usuarioService.existsByRut(usuario.getRut())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El RUT ya está registrado");
+        }
+
+        if (usuarioService.existsByUsername(usuario.getUsername())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El nombre de usuario ya está registrado");
+        }
+
+        if (usuarioService.existsByEmail(usuario.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El email ya está registrado");
+        }
+
+        try {
+            Usuario savedUsuario = usuarioService.save(usuario);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedUsuario);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al crear el usuario: " + e.getMessage());
+        }
+    }
+
+    //Actualizar usuario, aplica lo mismo que al crear
+    //no se puede repetir rut, username o email
+    @PutMapping("/{id}")
+    //@pathvariable es el id en la url y @RequestBdy es para el nuevo contenido del usuario
+    public ResponseEntity<?> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
+        // Validaciones de duplicados
+        Optional<Usuario> actualOpt = usuarioService.findById(id);
+        //por si no se encuentra
+        if (actualOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body("No se encontró el usuario con ID: " + id);
+        }
+
+        Usuario actual = actualOpt.get();
+
+        if (!actual.getRut().equals(usuario.getRut()) &&
+            usuarioService.existsByRut(usuario.getRut())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El RUT ya está registrado por otro usuario");
+        }
+
+        if (!actual.getUsername().equals(usuario.getUsername()) &&
+            usuarioService.existsByUsername(usuario.getUsername())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El nombre de usuario ya está registrado");
+        }
+
+        if (!actual.getEmail().equals(usuario.getEmail()) &&
+            usuarioService.existsByEmail(usuario.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body("El email ya está registrado");
+        }
+
+        
+        actual.setRut(usuario.getRut());
+        actual.setUsername(usuario.getUsername());
+        actual.setContrasena(usuario.getContrasena());
+        actual.setFechaNacimiento(usuario.getFechaNacimiento());
+
+        usuarioService.modificarInformacion(
+            id,
+            usuario.getPrimerNomb(),
+            usuario.getSegundoNomb(),
+            usuario.getPrimerApell(),
+            usuario.getSegundoApell(),
+            usuario.getEmail()
+        );
+
+        usuarioService.cambiarEstado(id, usuario.getEstado());
+
+        // Si querés permitir modificar roles desde acá
+        actual.setRoles(usuario.getRoles());
+
+        Usuario actualizado = usuarioService.save(actual);
+        return ResponseEntity.ok(actualizado);
     }
 }
 
