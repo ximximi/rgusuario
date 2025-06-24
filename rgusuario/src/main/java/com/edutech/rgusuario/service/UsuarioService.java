@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 
 import com.edutech.rgusuario.dto.RolDTO;
 import com.edutech.rgusuario.dto.UsuarioDTO;
-import com.edutech.rgusuario.dto.UsuarioRegistroDTO;
 import com.edutech.rgusuario.model.Estado;
 import com.edutech.rgusuario.model.Rol;
 import com.edutech.rgusuario.model.Usuario;
@@ -63,37 +62,31 @@ public class UsuarioService {
         //guarda usuario en la bd
         return usuarioRepository.save(usuario);
     }
-
-    //REGISTRAR usando usuarioRegistroDTO. ESTO ES PARA CLIENTE
+    //registro DESDE PERSPECTIVA CLIENTE
     @Transactional
-    public Usuario registrarDesdeCliente(UsuarioRegistroDTO dto) {
-        if (usuarioRepository.existsByUsername(dto.getUsername())) {
+    public Usuario registrarDesdeCliente(Usuario usuario) {
+        if (usuarioRepository.existsByUsername(usuario.getUsername())) {
             throw new IllegalArgumentException("El nombre de usuario ya está registrado.");
         }
-        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+        if (usuarioRepository.existsByEmail(usuario.getEmail())) {
             throw new IllegalArgumentException("El email ya está registrado.");
         }
-        if (usuarioRepository.existsByRut(dto.getRut())) {
+        if (usuarioRepository.existsByRut(usuario.getRut())) {
             throw new IllegalArgumentException("El RUT ingresado ya está registrado.");
         }
-        Usuario usuario = new Usuario();
-        usuario.setRut(dto.getRut());
-        usuario.setPrimerNomb(dto.getPrimerNomb());
-        usuario.setSegundoNomb(dto.getSegundoNomb());
-        usuario.setPrimerApell(dto.getPrimerApell());
-        usuario.setSegundoApell(dto.getSegundoApell());
-        usuario.setFechaNacimiento(dto.getFechaNacimiento());
-        usuario.setUsername(dto.getUsername());
-        usuario.setEmail(dto.getEmail());
 
-        String hash = BCrypt.hashpw(dto.getContrasena(), BCrypt.gensalt());
+        // Encriptar contraseña
+        String hash = BCrypt.hashpw(usuario.getContrasena(), BCrypt.gensalt());
         usuario.setContrasenaHash(hash);
-        usuario.setContrasena(null); 
-        // Rol cliente por defecto
+        usuario.setContrasena(null); // cambiado por el testing
+
+        // Asignar rol por defecto
         Rol rolCliente = rolService.obtenerRolCliente();
         usuario.setRoles(Collections.singletonList(rolCliente));
-        // Estado y fecha predeterminado (ACTIVO e instant)
+
+        // Setear estado y fecha
         usuario.crearCuenta();
+
         return usuarioRepository.save(usuario);
     }
 

@@ -92,19 +92,24 @@ public class Usuario {
     @Size(min = 8, message="La contraseña debe tener al menos 8 caracteres.")
     @jakarta.persistence.Transient
     private String contrasena;
+
     //esta sí se guarda en la bd
     //solo se puede escribir pero ya no se mostrará en el json
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String contrasenaHash;
 
+    // Bloqueado para escritura externa, pero visible en respuesta (útil para admin)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Estado estado;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)    
     @Column(nullable = false)
     private Instant fechaRegistro;
 
     //Rol
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST})//se quitó cascade
     //Relación de muchos a muchos, usuario_roles es la tabla intermedia, une a usuario y rol (por medio de id)
     @JoinTable(

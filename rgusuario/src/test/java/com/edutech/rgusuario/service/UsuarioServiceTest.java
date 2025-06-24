@@ -65,17 +65,6 @@ public class UsuarioServiceTest {
         return usuario;
     }
 
-    private UsuarioDTO crearUsuarioDTOValido() {
-        RolDTO rolDTO = new RolDTO(1L, "CLIENTE");
-
-        return new UsuarioDTO(
-            1L,
-            "xime_dev",
-            "xime@mail.com",
-            Estado.ACTIVO,
-            List.of(rolDTO)
-        );
-    }
     //Test save()
     @Test
     void testSave(){//guardarUsuario
@@ -174,7 +163,7 @@ public class UsuarioServiceTest {
     }
 
     @Test
-    //que la contraseña en texto plano se encripte
+    //que la contraseña en texto plano se encripte, antes no entregaba Null, ahora lo cambié
     void crearUsuario_encriptaContrasenaAntesDeGuardar() {
         // 1. Arrange
         Usuario usuario = crearUsuarioValido(); // incluye contraseña
@@ -203,6 +192,7 @@ public class UsuarioServiceTest {
     }
 
     @Test
+    //que funcione completamente con un usuario valido
     void crearUsuario_funcionaCorrectamenteConUsuarioValido() {
         // 1. Arrange
         Usuario usuario = crearUsuarioValido();

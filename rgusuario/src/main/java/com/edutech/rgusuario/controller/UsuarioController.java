@@ -133,7 +133,7 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarios);
     }
 
-    //crear usuario
+    //crear usuario como admin
     @PostMapping
     public ResponseEntity<?> createUsuario(@RequestBody Usuario usuario) {
         try {
@@ -146,11 +146,11 @@ public class UsuarioController {
                 .body("Error al crear el usuario: " + e.getMessage());
         }
     }
-    //crear usuario PERSPECTIVA CLIENTE
+    // crear usuario PERSPECTIVA CLIENTE (sin DTO)
     @PostMapping("/registro")
-    public ResponseEntity<?> registrarCliente(@Valid @RequestBody UsuarioRegistroDTO dto) {
+    public ResponseEntity<?> registrarCliente(@Valid @RequestBody Usuario usuario) {
         try {
-            Usuario nuevo = usuarioService.registrarDesdeCliente(dto);
+            Usuario nuevo = usuarioService.registrarDesdeCliente(usuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
@@ -160,7 +160,8 @@ public class UsuarioController {
         }
     }
 
-    //Actualizar usuario, aplica lo mismo que al crear
+    //Actualizar usuario, desde ADMIN
+    //aplica lo mismo que al crear
     //no se puede repetir rut, username o email
     @PutMapping("/{id}")
     //@pathvariable es el id en la url y @RequestBdy es para el nuevo contenido del usuario
@@ -193,7 +194,9 @@ public class UsuarioController {
         actual.setRut(usuario.getRut());
         actual.setUsername(usuario.getUsername());
         actual.setFechaNacimiento(usuario.getFechaNacimiento());
-
+        actual.setEstado(usuario.getEstado());
+        actual.setRoles(usuario.getRoles());
+        
         usuarioService.modificarInformacion(
             id,
             usuario.getPrimerNomb(),
