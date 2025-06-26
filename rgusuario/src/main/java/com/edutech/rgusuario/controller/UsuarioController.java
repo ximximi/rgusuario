@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.edutech.rgusuario.dto.UsuarioDTO;
-import com.edutech.rgusuario.dto.UsuarioRegistroDTO;
 import com.edutech.rgusuario.model.ApiRespuesta;
 import com.edutech.rgusuario.model.Estado;
 import com.edutech.rgusuario.model.Rol;
@@ -196,7 +195,7 @@ public class UsuarioController {
         actual.setFechaNacimiento(usuario.getFechaNacimiento());
         actual.setEstado(usuario.getEstado());
         actual.setRoles(usuario.getRoles());
-        
+
         usuarioService.modificarInformacion(
             id,
             usuario.getPrimerNomb(),

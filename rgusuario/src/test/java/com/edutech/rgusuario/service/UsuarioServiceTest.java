@@ -21,7 +21,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.edutech.rgusuario.dto.RolDTO;
 import com.edutech.rgusuario.dto.UsuarioDTO;
-import com.edutech.rgusuario.dto.UsuarioRegistroDTO;
 import com.edutech.rgusuario.model.Estado;
 import com.edutech.rgusuario.model.Rol;
 import com.edutech.rgusuario.model.Usuario;
@@ -121,7 +120,9 @@ public class UsuarioServiceTest {
         when(rolService.obtenerRolCliente()).thenReturn(rolCliente);
         when(usuarioRepository.save(any(Usuario.class)))
             .thenAnswer(invocation -> invocation.getArgument(0)); // devuelve el usuario
-
+            //InvocationOnMock
+            //invocation para que no devuelva null, simula el save porque mock
+            //invoca los argumentos que se le pasaron al método, index 0 porque solo fue un usuario
         // 2. Act
         Usuario resultado = usuarioService.crearUsuario(usuario);
 
@@ -179,7 +180,8 @@ public class UsuarioServiceTest {
 
         when(rolService.obtenerRolCliente()).thenReturn(rolCliente);
 
-        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invoc -> invoc.getArgument(0));
+        when(usuarioRepository.save(any(Usuario.class)))
+            .thenAnswer(invoc -> invoc.getArgument(0));
 
         // 2. Act
         Usuario resultado = usuarioService.crearUsuario(usuario);
@@ -271,6 +273,7 @@ public class UsuarioServiceTest {
         verify(rolService, never()).obtenerRolCliente(); // No debería usarse aquí
         verify(usuarioRepository).save(usuario);
     }
+
     //Test para registrarDesdeCliente()
 
     @Test
@@ -278,14 +281,14 @@ public class UsuarioServiceTest {
     //no haya datos duplicados, la contraseña se encripta, se asigne rol CLIENTE, se setee ACTIVO y su fecha, también de que se guarde bien (save())
     void registrarDesdeCliente_funcionaBienConDatosValidos() {
         // 1. Arrange
-        UsuarioRegistroDTO dto = new UsuarioRegistroDTO();
-        dto.setUsername("xime_dev");
-        dto.setEmail("xime@mail.com");
-        dto.setRut("12345678-9");
-        dto.setPrimerNomb("Ximena");
-        dto.setPrimerApell("Torres");
-        dto.setFechaNacimiento(LocalDate.of(1998, 5, 15));
-        dto.setContrasena("clave123");
+        Usuario usuario = new Usuario();
+        usuario.setUsername("xime_dev");
+        usuario.setEmail("xime@mail.com");
+        usuario.setRut("12345678-9");
+        usuario.setPrimerNomb("Ximena");
+        usuario.setPrimerApell("Torres");
+        usuario.setFechaNacimiento(LocalDate.of(1998, 5, 15));
+        usuario.setContrasena("clave123");
 
         when(usuarioRepository.existsByUsername("xime_dev")).thenReturn(false);
         when(usuarioRepository.existsByEmail("xime@mail.com")).thenReturn(false);
@@ -300,7 +303,7 @@ public class UsuarioServiceTest {
             .thenAnswer(invoc -> invoc.getArgument(0)); // devuelve el mismo usuario guardado
 
         // 2. Act
-        Usuario resultado = usuarioService.registrarDesdeCliente(dto);
+        Usuario resultado = usuarioService.registrarDesdeCliente(usuario);
 
         // 3. Assert
         assertThat(resultado.getUsername()).isEqualTo("xime_dev");
