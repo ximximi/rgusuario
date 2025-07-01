@@ -1,7 +1,6 @@
 package com.edutech.rgusuario.controller;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,14 +36,12 @@ public class UsuarioController {
 
     //Obtener la lista de usuarios
     @GetMapping
-    //ResponseEntity para poder personalizar la respuesta y el código de estado http (httpstatus)
     public ResponseEntity<?> getUsuarios() {
-        List<Usuario> usuarioLista = usuarioService.findAll();
-        if (usuarioLista.isEmpty()){
+        List<Usuario> lista = usuarioService.findAll();
+        if (lista.isEmpty()) {
             return ResponseEntity.ok(new ApiRespuesta<>("No hay usuarios registrados", List.of()));
-
         }
-        return ResponseEntity.ok(usuarioLista);
+        return ResponseEntity.ok(new ApiRespuesta<>("Lista de usuarios", lista));
     }
     
     //GETS POR ID, RUT, EMAIL, USERNAME, ESTADO
@@ -52,61 +49,38 @@ public class UsuarioController {
     //obtener por usuario id
     @GetMapping("/{id}")
     public ResponseEntity<?> getUsuarioById(@PathVariable Long id) {
-        Optional<Usuario> usuariOpt = usuarioService.findById(id);
-        if (usuariOpt.isPresent()) {
-            return ResponseEntity.ok(usuariOpt.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con ID: " + id);
-        }
+        Usuario usuario = usuarioService.findById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con ID: " + id));
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuario encontrado", usuario));
     }
     //UsuarioDTO
     //obtener usuario por id pero te pasa el usuarioDTO 
     @GetMapping("/info/{id}")
     public ResponseEntity<?> getUsuarioDTOById(@PathVariable Long id) {
-        Optional<UsuarioDTO> usuarioDTO = usuarioService.findUsuarioDTOById(id);
-        if (usuarioDTO.isPresent()) {
-            return ResponseEntity.ok(usuarioDTO.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con ID: " + id);
-        }
+        UsuarioDTO usuarioDTO = usuarioService.findUsuarioDTOById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con ID: " + id));
+        return ResponseEntity.ok(new ApiRespuesta<>("Información básica del usuario", usuarioDTO));
     }
-
     //obtener por usuario rut
     @GetMapping("/rut/{rut}")
     public ResponseEntity<?> getUsuarioByRut(@PathVariable String rut) {
-        Optional<Usuario> usuariOpt = usuarioService.findByRut(rut);
-        if (usuariOpt.isPresent()) {
-            return ResponseEntity.ok(usuariOpt.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con RUT: " + rut);
-        }
+        Usuario usuario = usuarioService.findByRut(rut)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con RUT: " + rut));
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuario con RUT encontrado", usuario));
     }
-
     //obtener por usuario email
     @GetMapping("/email/{email}")
     public ResponseEntity<?> getUsuarioByEmail(@PathVariable String email) {
-        Optional<Usuario> usuarioData = usuarioService.findByEmail(email);
-        if (usuarioData.isPresent()) {
-            return ResponseEntity.ok(usuarioData.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con email: " + email);
-        }
+        Usuario usuario = usuarioService.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con email: " + email));
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuario con email encontrado", usuario));
     }
-    
     //obtener por usuario usurname
     @GetMapping("/username/{username}")
     public ResponseEntity<?> getUsuarioByUsername(@PathVariable String username) {
-        Optional<Usuario> usuarioData = usuarioService.findByUsername(username);
-        if (usuarioData.isPresent()) {
-            return ResponseEntity.ok(usuarioData.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con username: " + username);
-        }
+        Usuario usuario = usuarioService.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con username: " + username));
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuario con username encontrado", usuario));
     }
 
     //GET POR ESTADO USUARIO Y USUARIODTO
@@ -118,7 +92,7 @@ public class UsuarioController {
         if (usuarios.isEmpty()) {
             return ResponseEntity.ok(new ApiRespuesta<>("No hay usuarios con ese estado.", List.of()));
         }
-        return ResponseEntity.ok(usuarios);
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuarios con estado " + estado, usuarios));
     }
 
     //usuarioDTO
@@ -127,69 +101,50 @@ public class UsuarioController {
     public ResponseEntity<?> getUsuariosDTOByEstado(@PathVariable Estado estado) {
         List<UsuarioDTO> usuarios = usuarioService.findUsuariosDTOByEstado(estado);
         if (usuarios.isEmpty()) {
-            return ResponseEntity.ok("No hay usuarios con estado: " + estado);
+            return ResponseEntity.ok(new ApiRespuesta<>("No hay usuarios con ese estado.", List.of()));
         }
-        return ResponseEntity.ok(usuarios);
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuarios DTO con estado " + estado, usuarios));
     }
-
-    //crear usuario como admin
+    // Crear usuario como admin
     @PostMapping
     public ResponseEntity<?> createUsuario(@RequestBody Usuario usuario) {
-        try {
-            Usuario savedUsuario = usuarioService.crearUsuario(usuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedUsuario);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error al crear el usuario: " + e.getMessage());
-        }
-    }
-    // crear usuario PERSPECTIVA CLIENTE (sin DTO)
-    @PostMapping("/registro")
-    public ResponseEntity<?> registrarCliente(@Valid @RequestBody Usuario usuario) {
-        try {
-            Usuario nuevo = usuarioService.registrarDesdeCliente(usuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body(nuevo);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error al registrar usuario: " + e.getMessage());
-        }
+        Usuario savedUsuario = usuarioService.crearUsuario(usuario);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new ApiRespuesta<>("Usuario creado correctamente", savedUsuario));
     }
 
-    //Actualizar usuario, desde ADMIN
-    //aplica lo mismo que al crear
-    //no se puede repetir rut, username o email
+    // Crear usuario desde la perspectiva del cliente
+    @PostMapping("/registro")
+    public ResponseEntity<?> registrarCliente(@Valid @RequestBody Usuario usuario) {
+        Usuario nuevo = usuarioService.registrarDesdeCliente(usuario);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(new ApiRespuesta<>("Usuario registrado correctamente", nuevo));
+    }
+
+    // Actualizar usuario (ADMIN)
     @PutMapping("/{id}")
-    //@pathvariable es el id en la url y @RequestBdy es para el nuevo contenido del usuario
     public ResponseEntity<?> updateUsuario(@PathVariable Long id, @RequestBody Usuario usuario) {
-        Optional<Usuario> actualOpt = usuarioService.findById(id);
-        //por si no se encuentra
-        if (actualOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiRespuesta<>("No se encontró el usuario con ID: " + id, null));
-        }
-        //se recupera porque sí existe
-        Usuario actual = actualOpt.get();
-        //validaciones de duplicados
+        Usuario actual = usuarioService.findById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con ID: " + id));
+
         if (!actual.getRut().equals(usuario.getRut()) &&
             usuarioService.existsByRut(usuario.getRut())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiRespuesta<>("El RUT ya está registrado", null));
         }
+
         if (!actual.getUsername().equals(usuario.getUsername()) &&
             usuarioService.existsByUsername(usuario.getUsername())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiRespuesta<>("El username ya está registrado", null));
         }
+
         if (!actual.getEmail().equals(usuario.getEmail()) &&
             usuarioService.existsByEmail(usuario.getEmail())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiRespuesta<>("El email ya está registrado", null));
-        }     
-        //actualización
+        }
+
         actual.setRut(usuario.getRut());
         actual.setUsername(usuario.getUsername());
         actual.setFechaNacimiento(usuario.getFechaNacimiento());
@@ -206,70 +161,51 @@ public class UsuarioController {
         );
 
         Usuario actualizado = usuarioService.save(actual);
-        return ResponseEntity.ok(actualizado);
+        return ResponseEntity.ok(new ApiRespuesta<>("Usuario actualizado correctamente", actualizado));
     }
-    //Modificar DESDE LA PERSPECTIVA DEL CLIENTE
+
+    // Modificación desde cliente
     @PutMapping("/{id}/modificar")
-    public ResponseEntity<?> modificarInformacion(
-        
-            @PathVariable Long id,
-            //captura los parámetros enviados en la url
-            //porque RequestBody sería aplicable con un nuevo dto
-            @RequestParam String primerNomb,
-            @RequestParam(required = false) String segundoNomb,
-            @RequestParam String primerApell,
-            @RequestParam(required = false) String segundoApell,
-            @RequestParam String email) {
-        Optional<Usuario> usuarioOpt = usuarioService.findById(id);
-        if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("No se encontró el usuario con ID: " + id);
-        }
-        Usuario actual = usuarioOpt.get();
+    public ResponseEntity<?> modificarInformacionCliente(
+        @PathVariable Long id,
+        @RequestParam String primerNomb,
+        @RequestParam(required = false) String segundoNomb,
+        @RequestParam String primerApell,
+        @RequestParam(required = false) String segundoApell,
+        @RequestParam String email) {
+
+        Usuario actual = usuarioService.findById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró el usuario con ID: " + id));
+
         if (!actual.getEmail().equals(email) && usuarioService.existsByEmail(email)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("El email ya está registrado por otro usuario");
+                .body(new ApiRespuesta<>("El email ya está registrado por otro usuario", null));
         }
 
         Usuario actualizado = usuarioService.modificarInformacion(
-            id, primerNomb, segundoNomb, primerApell, segundoApell, email
-        );
+            id, primerNomb, segundoNomb, primerApell, segundoApell, email);
 
-        return ResponseEntity.ok(actualizado);
+        return ResponseEntity.ok(new ApiRespuesta<>("Datos actualizados correctamente", actualizado));
     }
 
+    // Agregar rol a usuario
     @PostMapping("/{usuarioId}/roles/{rolId}")
-    public ResponseEntity<?> agregarRol(
-            @PathVariable Long usuarioId,
-            @PathVariable Long rolId) {
+    public ResponseEntity<?> agregarRol(@PathVariable Long usuarioId, @PathVariable Long rolId) {
+        Rol rol = rolService.findById(rolId)
+            .orElseThrow(() -> new RuntimeException("No se encontró el rol con ID: " + rolId));
 
-        Optional<Rol> rolOpt = rolService.findById(rolId);
-        if (rolOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiRespuesta<>("No se encontró el rol con ID: " + rolId, null));
-        }
-        try {
-            Usuario actualizado = usuarioService.agregarRol(usuarioId, rolOpt.get());
-            return ResponseEntity.ok(actualizado);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiRespuesta<>(e.getMessage(),null));
-        }
+        Usuario actualizado = usuarioService.agregarRol(usuarioId, rol);
+        return ResponseEntity.ok(new ApiRespuesta<>("Rol agregado correctamente", actualizado));
     }
-    @DeleteMapping("/{usuarioId}/roles/{rolId}")
-    public ResponseEntity<?> removerRol(
-            @PathVariable Long usuarioId,
-            @PathVariable Long rolId) {
 
-        try {
-            Usuario actualizado = usuarioService.removerRol(usuarioId, rolId);
-            return ResponseEntity.ok(actualizado);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiRespuesta<>(e.getMessage(),null));
-        }
+    // Remover rol de usuario
+    @DeleteMapping("/{usuarioId}/roles/{rolId}")
+    public ResponseEntity<?> removerRol(@PathVariable Long usuarioId, @PathVariable Long rolId) {
+        Usuario actualizado = usuarioService.removerRol(usuarioId, rolId);
+        return ResponseEntity.ok(new ApiRespuesta<>("Rol removido correctamente", actualizado));
     }
 }
+
 
 /*
     @GetMapping("/{id}")

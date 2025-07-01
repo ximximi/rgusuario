@@ -109,8 +109,7 @@ public class Usuario {
     private Instant fechaRegistro;
 
     //Rol
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST})//se quitó cascade
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST})
     //Relación de muchos a muchos, usuario_roles es la tabla intermedia, une a usuario y rol (por medio de id)
     @JoinTable(
         name = "usuario_roles",
